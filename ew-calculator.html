@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EW Planning Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f4f4f5;
+      color: #18181b;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .container { max-width: 760px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 22px; color: #111; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #d4d4d8;
+      margin-bottom: 22px;
+      gap: 0;
+    }
+    .tab {
+      padding: 9px 22px;
+      border: none;
+      background: none;
+      font-size: 14px;
+      color: #71717a;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      font-family: inherit;
+      transition: color 0.1s;
+    }
+    .tab.active { color: #111; border-bottom-color: #18181b; font-weight: 500; }
+    .tab:hover:not(.active) { color: #333; }
+
+    /* ── Cards ── */
+    .card {
+      background: #fff;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #71717a;
+      margin-bottom: 16px;
+    }
+
+    /* ── Form rows ── */
+    .field {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .field:last-child { margin-bottom: 0; }
+
+    .field-label { font-size: 13px; color: #3f3f46; }
+
+    .field-inputs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    input[type="number"] {
+      width: 108px;
+      padding: 5px 9px;
+      border: 1px solid #d4d4d8;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #111;
+      background: #fff;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus { outline: none; border-color: #71717a; }
+
+    select {
+      padding: 5px 9px;
+      border: 1px solid #d4d4d8;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #111;
+      background: #fff;
+    }
+    select:focus { outline: none; border-color: #71717a; }
+
+    .unit { font-size: 12px; color: #a1a1aa; white-space: nowrap; }
+    .sep  { font-size: 12px; color: #a1a1aa; }
+
+    /* ── Result rows ── */
+    .result {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      align-items: center;
+      gap: 10px;
+      padding-top: 12px;
+      margin-top: 12px;
+      border-top: 1px solid #f4f4f5;
+    }
+    .result-label { font-size: 13px; color: #3f3f46; }
+    .result-val {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111;
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+    }
+    .result-val .unit { font-size: 12px; font-weight: 400; }
+    .result-val.highlight { color: #1d4ed8; }
+
+    /* ── Optional / Hopping ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #3f3f46;
+      cursor: pointer;
+    }
+    .toggle-row input[type="checkbox"] { cursor: pointer; accent-color: #18181b; }
+    .collapsible { display: none; padding-top: 14px; margin-top: 14px; border-top: 1px dashed #e4e4e7; }
+    .collapsible.open { display: block; }
+
+    /* ── Path model note ── */
+    .model-note { font-size: 11px; color: #a1a1aa; margin-left: 4px; }
+
+    /* ── Jamming effect ── */
+    .effect {
+      margin-top: 14px;
+      padding: 11px 15px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .effect.none    { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .effect.partial { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .effect.full    { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+    .margin-display {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111;
+      line-height: 1;
+    }
+
+    /* ── Divider ── */
+    hr { border: none; border-top: 1px solid #e4e4e7; margin: 14px 0; }
+
+    /* ── Instructions ── */
+    .instructions {
+      background: #fafafa;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 14px;
+    }
+    .instructions p {
+      font-size: 13px;
+      color: #52525b;
+      margin-bottom: 10px;
+    }
+    .instructions ol, .instructions ul {
+      padding-left: 18px;
+      font-size: 13px;
+      color: #52525b;
+    }
+    .instructions li { margin-bottom: 4px; }
+    .instructions strong { color: #27272a; }
+    .instr-toggle {
+      font-size: 12px;
+      color: #71717a;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: inherit;
+      padding: 0;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .instr-toggle:hover { color: #333; }
+    .instr-body { display: none; margin-top: 6px; }
+    .instr-body.open { display: block; }
+
+    /* ── Utility ── */
+    .hidden { display: none !important; }
+
+    @media (max-width: 540px) {
+      .field { grid-template-columns: 1fr; gap: 4px; }
+      .result { grid-template-columns: 1fr; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:22px;">
+    <h1 style="margin-bottom:0">EW Planning Calculator</h1>
+    <button onclick="resetAll()" style="font-size:13px; color:#71717a; background:none; border:1px solid #d4d4d8; border-radius:5px; padding:5px 14px; cursor:pointer; font-family:inherit;">Reset</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('ea', this)">Electronic Attack (EA)</button>
+    <button class="tab"        onclick="showTab('es', this)">Electronic Support (ES)</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       EA TAB
+  ══════════════════════════════════════════ -->
+  <div id="tab-ea">
+
+    <!-- Instructions -->
+    <div class="instructions">
+      <button class="instr-toggle" onclick="toggleInstr('ea-instr')">▸ How to use this calculator</button>
+      <div class="instr-body" id="ea-instr">
+        <p>Determines whether your jammer has enough power to overpower the enemy radio at the target location. Fill in each section top to bottom — results update automatically.</p>
+        <ol>
+          <li><strong>EA Platform</strong> — Enter your jammer output in Watts or dBm, then add your antenna gain. EIRP is calculated automatically.</li>
+          <li><strong>Frequency Hopping Tax</strong> — Check this box only if the enemy radio uses frequency hopping <em>and</em> your jammer cannot follow the hop pattern. Enter both bandwidths in kHz.</li>
+          <li><strong>EA Path Loss</strong> — Enter the distance from your jammer to the target, the operating frequency in MHz, and the terrain type. The calculator selects the correct path loss model automatically (&lt;1 km or ≥1 km).</li>
+          <li><strong>Enemy Radio</strong> — Enter the enemy radio's power and antenna gain to calculate its EIRP.</li>
+          <li><strong>Enemy Radio Path Loss</strong> — Enter the distance between the enemy transmitter and receiver, their frequency, and terrain type.</li>
+          <li><strong>Jamming Assessment</strong> — Compares received jamming power against received enemy signal strength. A margin of +6 dB or greater means complete jamming.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- EA Platform -->
+    <div class="card">
+      <div class="card-title">EA Platform</div>
+
+      <div class="field">
+        <span class="field-label">Platform Power</span>
+        <div class="field-inputs">
+          <input type="number" id="ea-watts" placeholder="Watts" min="0" step="any" oninput="syncWattsDbm('ea'); calcEA()">
+          <span class="sep">W =</span>
+          <input type="number" id="ea-dbm" placeholder="dBm" step="any" oninput="syncDbmWatts('ea'); calcEA()">
+          <span class="unit">dBm</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Antenna Gain</span>
+        <div class="field-inputs">
+          <input type="number" id="ea-gain" placeholder="0" step="any" oninput="calcEA()">
+          <span class="unit">dBi</span>
+        </div>
+      </div>
+
+      <div class="result">
+        <span class="result-label">EIRP</span>
+        <span class="result-val" id="ea-eirp-disp">—</span>
+      </div>
+    </div>
+
+    <!-- Frequency Hopping -->
+    <div class="card">
+      <label class="toggle-row">
+        <input type="checkbox" id="ea-hop-check" onchange="toggleCollapse('ea-hop-body'); calcEA()">
+        Apply Frequency Hopping Tax
+      </label>
+
+      <div class="collapsible" id="ea-hop-body">
+        <div class="field">
+          <span class="field-label">Total Jamming Bandwidth</span>
+          <div class="field-inputs">
+            <input type="number" id="ea-jam-bw" placeholder="e.g. 10000" min="0" step="any" oninput="calcEA()">
+            <span class="unit">kHz</span>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Target Channel Width</span>
+          <div class="field-inputs">
+            <input type="number" id="ea-ch-bw" placeholder="e.g. 25" min="0" step="any" oninput="calcEA()">
+            <span class="unit">kHz</span>
+          </div>
+        </div>
+        <div class="result">
+          <span class="result-label">Hopping Tax</span>
+          <span class="result-val" id="ea-hop-tax-disp">—</span>
+        </div>
+        <div class="result">
+          <span class="result-label">Adjusted EIRP</span>
+          <span class="result-val" id="ea-eirp-adj-disp">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- EA Path Loss -->
+    <div class="card">
+      <div class="card-title">EA Path Loss — Jammer to Target</div>
+
+      <div class="field">
+        <span class="field-label">Distance to Target</span>
+        <div class="field-inputs">
+          <input type="number" id="ea-dist" placeholder="km" min="0.001" step="any" oninput="calcEA()">
+          <span class="unit">km</span>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Frequency</span>
+        <div class="field-inputs">
+          <input type="number" id="ea-freq" placeholder="MHz" min="1" step="any" oninput="calcEA()" onchange="syncEnemyFreq()">
+          <span class="unit">MHz</span>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Terrain / Clutter</span>
+        <div class="field-inputs">
+          <select id="ea-clutter" onchange="calcEA()">
+            <option value="0">Free Space / Air-to-Air (+0 dB)</option>
+            <option value="20" selected>Rural / Open Field (+20 dB)</option>
+            <option value="30">Light Forest / Suburbs (+30 dB)</option>
+            <option value="40">Dense Forest / Urban (+40 dB)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="result">
+        <span class="result-label">Path Loss <span class="model-note" id="ea-path-model"></span></span>
+        <span class="result-val" id="ea-path-loss-disp">—</span>
+      </div>
+      <div class="result">
+        <span class="result-label"><strong>Received Jamming Power</strong></span>
+        <span class="result-val highlight" id="ea-rx-jam-disp">—</span>
+      </div>
+    </div>
+
+    <!-- Enemy Radio -->
+    <div class="card">
+      <div class="card-title">Enemy Radio</div>
+
+      <div class="field">
+        <span class="field-label">Radio Power</span>
+        <div class="field-inputs">
+          <input type="number" id="er-watts" placeholder="Watts" min="0" step="any" oninput="syncWattsDbm('er'); calcEA()">
+          <span class="sep">W =</span>
+          <input type="number" id="er-dbm" placeholder="dBm" step="any" oninput="syncDbmWatts('er'); calcEA()">
+          <span class="unit">dBm</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Antenna Gain</span>
+        <div class="field-inputs">
+          <input type="number" id="er-gain" placeholder="0" step="any" oninput="calcEA()">
+          <span class="unit">dBi</span>
+        </div>
+      </div>
+
+      <div class="result">
+        <span class="result-label">Enemy EIRP</span>
+        <span class="result-val" id="er-eirp-disp">—</span>
+      </div>
+    </div>
+
+    <!-- Enemy Radio Path Loss -->
+    <div class="card">
+      <div class="card-title">Enemy Radio Path Loss — Transmitter to Receiver</div>
+
+      <div class="field">
+        <span class="field-label">Distance Between Radios</span>
+        <div class="field-inputs">
+          <input type="number" id="er-dist" placeholder="km" min="0.001" step="any" oninput="calcEA()">
+          <span class="unit">km</span>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Frequency</span>
+        <div class="field-inputs">
+          <input type="number" id="er-freq" placeholder="MHz" min="1" step="any" oninput="calcEA()">
+          <span class="unit">MHz</span>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Terrain / Clutter</span>
+        <div class="field-inputs">
+          <select id="er-clutter" onchange="calcEA()">
+            <option value="0">Free Space / Air-to-Air (+0 dB)</option>
+            <option value="20" selected>Rural / Open Field (+20 dB)</option>
+            <option value="30">Light Forest / Suburbs (+30 dB)</option>
+            <option value="40">Dense Forest / Urban (+40 dB)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="result">
+        <span class="result-label">Path Loss <span class="model-note" id="er-path-model"></span></span>
+        <span class="result-val" id="er-path-loss-disp">—</span>
+      </div>
+      <div class="result">
+        <span class="result-label"><strong>Received Enemy Signal</strong></span>
+        <span class="result-val highlight" id="er-rx-sig-disp">—</span>
+      </div>
+    </div>
+
+    <!-- Jamming Assessment -->
+    <div class="card">
+      <div class="card-title">Jamming Assessment</div>
+
+      <div class="field">
+        <span class="field-label">Received Jamming Power</span>
+        <span id="cmp-jam-disp" style="font-size:13px; font-weight:500">—</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Received Enemy Signal</span>
+        <span id="cmp-sig-disp" style="font-size:13px; font-weight:500">—</span>
+      </div>
+
+      <hr>
+
+      <div class="field">
+        <span class="field-label">Jamming Margin (J/S)</span>
+        <div style="display:flex; align-items:baseline; gap:6px">
+          <span class="margin-display" id="cmp-margin-disp">—</span>
+          <span class="unit">dB</span>
+        </div>
+      </div>
+
+      <div id="cmp-effect-box"></div>
+    </div>
+
+  </div><!-- /tab-ea -->
+
+
+  <!-- ══════════════════════════════════════════
+       ES TAB
+  ══════════════════════════════════════════ -->
+  <div id="tab-es" class="hidden">
+
+    <!-- Instructions -->
+    <div class="instructions">
+      <button class="instr-toggle" onclick="toggleInstr('es-instr')">▸ How to use this calculator</button>
+      <div class="instr-body" id="es-instr">
+        <p>Estimates the maximum range at which your sensor can detect an enemy emission. Fill in each section top to bottom — results update automatically.</p>
+        <ol>
+          <li><strong>Enemy Emitter</strong> — Enter the enemy emitter's power in Watts or dBm and its antenna gain. Enemy EIRP is calculated automatically.</li>
+          <li><strong>Sensor Capabilities</strong> — Enter your sensor's antenna gain and equipment sensitivity (the minimum signal level your receiver can detect, typically a negative dBm value). Max Loss is calculated automatically.</li>
+          <li><strong>Detection Range</strong> — Enter the enemy's frequency in MHz and select the terrain type. The estimated detection range is shown in kilometers.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Enemy Emitter -->
+    <div class="card">
+      <div class="card-title">Enemy Emitter</div>
+
+      <div class="field">
+        <span class="field-label">Emitter Power</span>
+        <div class="field-inputs">
+          <input type="number" id="es-watts" placeholder="Watts" min="0" step="any" oninput="syncWattsDbm('es'); calcES()">
+          <span class="sep">W =</span>
+          <input type="number" id="es-dbm" placeholder="dBm" step="any" oninput="syncDbmWatts('es'); calcES()">
+          <span class="unit">dBm</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Emitter Antenna Gain</span>
+        <div class="field-inputs">
+          <input type="number" id="es-emit-gain" placeholder="0" step="any" oninput="calcES()">
+          <span class="unit">dBi</span>
+        </div>
+      </div>
+
+      <div class="result">
+        <span class="result-label">Enemy EIRP</span>
+        <span class="result-val" id="es-eirp-disp">—</span>
+      </div>
+    </div>
+
+    <!-- Sensor Capabilities -->
+    <div class="card">
+      <div class="card-title">Sensor Capabilities</div>
+
+      <div class="field">
+        <span class="field-label">Antenna Gain</span>
+        <div class="field-inputs">
+          <input type="number" id="es-ant-gain" placeholder="0" step="any" oninput="calcES()">
+          <span class="unit">dBi</span>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Equipment Sensitivity</span>
+        <div class="field-inputs">
+          <input type="number" id="es-sensitivity" placeholder="e.g. −110" step="any" oninput="calcES()">
+          <span class="unit">dBm</span>
+        </div>
+      </div>
+
+      <div class="result">
+        <span class="result-label">Max Loss</span>
+        <span class="result-val" id="es-max-loss-disp">—</span>
+      </div>
+    </div>
+
+    <!-- Detection Range -->
+    <div class="card">
+      <div class="card-title">Detection Range</div>
+
+      <div class="field">
+        <span class="field-label">Enemy Frequency</span>
+        <div class="field-inputs">
+          <input type="number" id="es-freq" placeholder="MHz" min="1" step="any" oninput="calcES()">
+          <span class="unit">MHz</span>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Terrain / Clutter</span>
+        <div class="field-inputs">
+          <select id="es-clutter" onchange="calcES()">
+            <option value="0">Free Space / Air-to-Air (+0 dB)</option>
+            <option value="20" selected>Rural / Open Field (+20 dB)</option>
+            <option value="30">Light Forest / Suburbs (+30 dB)</option>
+            <option value="40">Dense Forest / Urban (+40 dB)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="result">
+        <span class="result-label"><strong>Estimated Detection Range</strong></span>
+        <span class="result-val highlight" style="font-size:28px; font-weight:700" id="es-range-disp">—</span>
+      </div>
+    </div>
+
+  </div><!-- /tab-es -->
+
+</div><!-- /container -->
+
+<script>
+// ── Helpers ────────────────────────────────────────────
+function numVal(id) {
+  const v = parseFloat(document.getElementById(id).value);
+  return isNaN(v) ? null : v;
+}
+
+function display(id, value, decimals) {
+  const el = document.getElementById(id);
+  if (value === null || value === undefined || !isFinite(value)) {
+    el.innerHTML = '—';
+    return;
+  }
+  const d = (decimals === undefined) ? 2 : decimals;
+  el.innerHTML = value.toFixed(d) + ' <span class="unit">' + (el.dataset.unit || '') + '</span>';
+}
+
+function setDisplay(id, value, unit, decimals) {
+  const el = document.getElementById(id);
+  if (value === null || value === undefined || !isFinite(value)) {
+    el.textContent = '—';
+    return;
+  }
+  const d = (decimals === undefined) ? 2 : decimals;
+  el.innerHTML = value.toFixed(d) + (unit ? ' <span class="unit">' + unit + '</span>' : '');
+}
+
+function pathLoss(dist, freq, clutter) {
+  if (dist === null || freq === null || dist <= 0 || freq <= 0) return null;
+  const cl = parseFloat(clutter);
+  if (dist >= 1) {
+    return 40 * Math.log10(dist) + 20 * Math.log10(freq) + 32.44 + cl;
+  } else {
+    return 20 * Math.log10(dist) + 20 * Math.log10(freq) + 32.44 + cl;
+  }
+}
+
+// ── Reset ──────────────────────────────────────────────
+function resetAll() {
+  document.querySelectorAll('input[type="number"]').forEach(el => el.value = '');
+  document.getElementById('ea-hop-check').checked = false;
+  document.getElementById('ea-hop-body').classList.remove('open');
+
+  ['ea-eirp-disp','ea-hop-tax-disp','ea-eirp-adj-disp','ea-path-loss-disp',
+   'ea-rx-jam-disp','er-eirp-disp','er-path-loss-disp','er-rx-sig-disp',
+   'cmp-jam-disp','cmp-sig-disp','cmp-margin-disp',
+   'es-eirp-disp','es-max-loss-disp','es-range-disp'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+  document.getElementById('ea-path-model').textContent = '';
+  document.getElementById('er-path-model').textContent = '';
+  document.getElementById('cmp-effect-box').innerHTML = '';
+}
+
+// ── Instructions toggle ────────────────────────────────
+function toggleInstr(id) {
+  const body = document.getElementById(id);
+  const btn  = body.previousElementSibling;
+  const open = body.classList.toggle('open');
+  btn.textContent = (open ? '▾' : '▸') + ' How to use this calculator';
+}
+
+// ── Auto-sync EA → Enemy frequency ────────────────────
+function syncEnemyFreq() {
+  const erFreqEl = document.getElementById('er-freq');
+  if (erFreqEl.value === '') {
+    erFreqEl.value = document.getElementById('ea-freq').value;
+  }
+}
+
+// ── Watts ↔ dBm sync ──────────────────────────────────
+function syncWattsDbm(prefix) {
+  const w = numVal(prefix + '-watts');
+  if (w !== null && w > 0) {
+    document.getElementById(prefix + '-dbm').value = (10 * Math.log10(w * 1000)).toFixed(2);
+  } else if (w !== null) {
+    document.getElementById(prefix + '-dbm').value = '';
+  }
+}
+
+function syncDbmWatts(prefix) {
+  const d = numVal(prefix + '-dbm');
+  if (d !== null) {
+    document.getElementById(prefix + '-watts').value = Math.pow(10, (d - 30) / 10).toFixed(6);
+  }
+}
+
+// ── EA Calculator ──────────────────────────────────────
+function calcEA() {
+  // --- EA Platform ---
+  const eaDbm  = numVal('ea-dbm');
+  const eaGain = numVal('ea-gain') ?? 0;
+  const eirp   = eaDbm !== null ? eaDbm + eaGain : null;
+  setDisplay('ea-eirp-disp', eirp, 'dBm');
+
+  // --- Hopping Tax ---
+  const hopOn = document.getElementById('ea-hop-check').checked;
+  let effectiveEirp = eirp;
+  if (hopOn) {
+    const jamBw = numVal('ea-jam-bw');
+    const chBw  = numVal('ea-ch-bw');
+    const hopTax = (jamBw !== null && chBw !== null && chBw > 0)
+      ? 10 * Math.log10(jamBw / chBw) : null;
+    const adjEirp = (eirp !== null && hopTax !== null) ? eirp - hopTax : null;
+    setDisplay('ea-hop-tax-disp',  hopTax,  'dB');
+    setDisplay('ea-eirp-adj-disp', adjEirp, 'dBm');
+    effectiveEirp = adjEirp;
+  }
+
+  // --- EA Path Loss ---
+  const eaDist    = numVal('ea-dist');
+  const eaFreq    = numVal('ea-freq');
+  const eaClutter = document.getElementById('ea-clutter').value;
+  const eaPL      = pathLoss(eaDist, eaFreq, eaClutter);
+
+  document.getElementById('ea-path-model').textContent =
+    eaDist === null ? '' : eaDist >= 1 ? '(40 dB/dec)' : '(20 dB/dec)';
+
+  setDisplay('ea-path-loss-disp', eaPL, 'dB');
+  const rxJam = (effectiveEirp !== null && eaPL !== null) ? effectiveEirp - eaPL : null;
+  setDisplay('ea-rx-jam-disp', rxJam, 'dBm');
+
+  // --- Enemy Radio ---
+  const erDbm  = numVal('er-dbm');
+  const erGain = numVal('er-gain') ?? 0;
+  const erEirp = erDbm !== null ? erDbm + erGain : null;
+  setDisplay('er-eirp-disp', erEirp, 'dBm');
+
+  // --- Enemy Path Loss ---
+  const erDist    = numVal('er-dist');
+  const erFreq    = numVal('er-freq');
+  const erClutter = document.getElementById('er-clutter').value;
+  const erPL      = pathLoss(erDist, erFreq, erClutter);
+
+  document.getElementById('er-path-model').textContent =
+    erDist === null ? '' : erDist >= 1 ? '(40 dB/dec)' : '(20 dB/dec)';
+
+  setDisplay('er-path-loss-disp', erPL, 'dB');
+  const rxSig = (erEirp !== null && erPL !== null) ? erEirp - erPL : null;
+  setDisplay('er-rx-sig-disp', rxSig, 'dBm');
+
+  // --- Comparison ---
+  document.getElementById('cmp-jam-disp').textContent =
+    rxJam !== null ? rxJam.toFixed(2) + ' dBm' : '—';
+  document.getElementById('cmp-sig-disp').textContent =
+    rxSig !== null ? rxSig.toFixed(2) + ' dBm' : '—';
+
+  const effectBox = document.getElementById('cmp-effect-box');
+  if (rxJam !== null && rxSig !== null) {
+    const margin = rxJam - rxSig;
+    document.getElementById('cmp-margin-disp').textContent = margin.toFixed(2);
+
+    let cls, text;
+    if (margin <= -6) {
+      cls  = 'none';
+      text = 'No Effect — Enemy signal captures the receiver';
+    } else if (margin < 6) {
+      cls  = 'partial';
+      text = 'Partial Effect — Radio will hear warbling / popcorn sounds';
+    } else {
+      cls  = 'full';
+      text = 'Complete Jamming — Jammer captures the receiver (static only)';
+    }
+    effectBox.innerHTML = `<div class="effect ${cls}">${text}</div>`;
+  } else {
+    document.getElementById('cmp-margin-disp').textContent = '—';
+    effectBox.innerHTML = '';
+  }
+}
+
+// ── ES Calculator ──────────────────────────────────────
+function calcES() {
+  // Enemy EIRP
+  const esDbm      = numVal('es-dbm');
+  const esEmitGain = numVal('es-emit-gain') ?? 0;
+  const esEirp     = esDbm !== null ? esDbm + esEmitGain : null;
+  setDisplay('es-eirp-disp', esEirp, 'dBm');
+
+  // Max Loss
+  const esAntGain     = numVal('es-ant-gain') ?? 0;
+  const esSensitivity = numVal('es-sensitivity');
+  const maxLoss = (esEirp !== null && esSensitivity !== null)
+    ? esEirp + esAntGain - esSensitivity : null;
+  setDisplay('es-max-loss-disp', maxLoss, 'dB');
+
+  // Detection Range
+  const esFreq    = numVal('es-freq');
+  const esClutter = parseFloat(document.getElementById('es-clutter').value);
+  let range = null;
+  if (maxLoss !== null && esFreq !== null && esFreq > 0) {
+    const exp = (maxLoss - 20 * Math.log10(esFreq) - 32.44 - esClutter) / 40;
+    range = Math.pow(10, exp);
+  }
+  setDisplay('es-range-disp', range, 'km', 2);
+}
+
+// ── Collapsibles ───────────────────────────────────────
+function toggleCollapse(id) {
+  document.getElementById(id).classList.toggle('open',
+    document.getElementById('ea-hop-check').checked);
+}
+
+// ── Tabs ───────────────────────────────────────────────
+function showTab(name, btn) {
+  document.getElementById('tab-ea').classList.toggle('hidden', name !== 'ea');
+  document.getElementById('tab-es').classList.toggle('hidden', name !== 'es');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
